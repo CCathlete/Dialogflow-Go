@@ -33,8 +33,6 @@ type NLPResponse struct {
 	Entities   map[string]string `json:"entities"`
 }
 
-var Dfp DialogflowProcessor
-
 func (dfp *DialogflowProcessor) Init(a ...string) (err error) {
 	dfp.projectID = a[0]
 	dfp.authJSONFilePath = a[1]
