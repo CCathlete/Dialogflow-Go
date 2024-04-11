@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 
 	dialogflow "cloud.google.com/go/dialogflow/apiv2"
 	dialogflowpb "cloud.google.com/go/dialogflow/apiv2/dialogflowpb"
 	"google.golang.org/api/option"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 /*
@@ -90,4 +92,45 @@ func (dfp *DialogflowProcessor) ProcessNLP(rawMessage string, username string,
 		}
 	}
 	return r
+}
+
+func extractDialogflowEntities(p *structpb.Value) (extractedEntity string) {
+	kind := p.GetKind()
+	switch kind.(type) {
+	case *structpb.Value_StringValue:
+		return p.GetStringValue()
+	case *structpb.Value_NumberValue:
+		return strconv.FormatFloat(p.GetNumberValue(), 'f', 6, 64)
+	case *structpb.Value_BoolValue:
+		return strconv.FormatBool(p.GetBoolValue())
+	case *structpb.Value_StructValue:
+		s := p.GetStructValue()
+		fields := s.GetFields()
+		extractedEntity = ""
+		for key, value := range fields {
+			if key == "amount" {
+				extractedEntity = fmt.Sprintf("%s%s", extractedEntity,
+					strconv.FormatFloat(value.GetNumberValue(), 'f', 6, 64))
+			}
+			if key == "unit" {
+				extractedEntity = fmt.Sprintf("%s%s", extractedEntity,
+					value.GetStringValue())
+			}
+			if key == "date_time" {
+				extractedEntity = fmt.Sprintf("%s%s", extractedEntity,
+					value.GetStringValue())
+			}
+			// Other entity types can be added here.
+		}
+		return extractedEntity
+	case *structpb.Value_ListValue:
+		list := p.GetListValue()
+		if len(list.GetValues()) > 1 {
+			// Extract more values (what does that mean?)
+		}
+		extractedEntity = extractDialogflowEntities(list.GetValues()[0])
+		return extractedEntity
+	default:
+		return ""
+	}
 }
